@@ -8,6 +8,11 @@ The solution is implemented as a single Databricks notebook `it_ticket_pipeline`
 - `servicenow_incidents_10k.csv` – Raw dataset (committed to repo)
 - `it_ticket_pipeline` – Databricks notebook with the complete pipeline
 
+## Prerequisites
+- Azure Databricks Premium workspace with serverless compute enabled.
+- The notebook assumes the raw CSV (`servicenow_incidents_10k.csv`) is uploaded to the same Workspace path as in the code (e.g., `/Workspace/Users/your.email@domain.com/servicenow-pipeline/`).
+- No additional setup outside Databricks is needed — the notebook handles all Unity Catalog creation internally.
+
 ## Pipeline Overview
 - **Bronze**: Raw ingestion of the CSV (preserved as-is) into a Delta volume
 - **Silver**: Cleaning & transformation
@@ -21,6 +26,13 @@ The solution is implemented as a single Databricks notebook `it_ticket_pipeline`
   - Exported as a single downloadable CSV
 
 All layers use **Unity Catalog managed volumes** (`/Volumes/...`) – no legacy DBFS paths.
+
+### Before Running
+1. Upload `servicenow_incidents_10k.csv` to your Databricks Workspace.
+   - Recommended: Place it in the same Repos folder as the notebook (e.g., next to `it_ticket_pipeline`).
+   - Or any accessible Workspace path.
+2. In Cell 2, update the `csv_path` variable to point to your uploaded file location.
+   - Example: `/Workspace/Users/your.email@domain.com/servicenow-pipeline/servicenow_incidents_10k.csv`
 
 ## How to Run the Pipeline
 
@@ -36,12 +48,12 @@ All layers use **Unity Catalog managed volumes** (`/Volumes/...`) – no legacy 
    | 4    | Silver layer | Reads Bronze → cleans → writes to `/Volumes/it_ticket_medallion/silver/clean_delta`. |
    | 5    | Gold layer | Reads Silver → aggregates → writes Delta to `/Volumes/it_ticket_medallion/gold/aggregated_delta` and CSV to `/Volumes/it_ticket_medallion/gold/ticket_aggregates_csv`. |
 
-4. After running Cell 5:
+4. After running the final cell:
    - View the aggregation with `display(gold_df)`
    - Download the CSV:
      - Go to **Catalog** (sidebar)
      - Navigate: `it_ticket_medallion` → `gold` → `ticket_aggregates_csv`
-     - Right-click the `part-00000-*.csv` file → **Download**
+     - Click the `part-00000-*.csv` file → **Download**
 
 The pipeline is **idempotent** – every write uses `mode("overwrite")`, so you can re-run any cell (or the whole notebook) multiple times with identical results and no duplicates.
 
@@ -56,4 +68,11 @@ The pipeline is **idempotent** – every write uses `mode("overwrite")`, so you 
 
 ## Production Considerations
 - Incremental processing with `MERGE` for ongoing data
-- Data quality checks (e
+- Data quality checks (e.g., Great Expectations or Delta Live Tables expectations)
+- Schema evolution handling
+- Job orchestration via Databricks Workflows
+- Monitoring and alerting on pipeline runs
+
+The solution directly aligns with the requested Medallion Architecture while using modern Azure Databricks best practices (Unity Catalog, volumes, serverless).
+
+Thank you for the opportunity!
